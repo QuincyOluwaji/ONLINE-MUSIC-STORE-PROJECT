@@ -108,37 +108,18 @@ set state = 'BW'
 where city = 'Stuttgart'
 and country = 'Germany'
        
-----            Filling some of the composers rows
+----            dropped the composers column because it contained the null values and it is not needed for the analysis
 
-select *
-from album$ aa
-join artist$ bb on aa.artist_id = bb.artist_id
-join track$ tt on tt.album_id = aa.album_id
-order by tt.album_id, bb.artist_id
+alter table track$
+drop column composer
 
-
-update track$
-set composer = 'F. Baltes, S. Kaufman, U. Dirkscneider & W. Hoffman'
-where track_id in (select artist_id
-from track$ ta join 
-album$ aa 
-on ta.album_id = aa.album_id
-where artist_id like 2)
-
-update track$
-set composer = 'Antônio Carlos Jobim'
-where track_id in (select artist_id
-from track$ ta join 
-album$ aa 
-on ta.album_id = aa.album_id
-where aa.artist_id = 6)
-
-
+	
 ---           Checking for duplicate values
 
 select *
 from (
-select*, ROW_NUMBER() over(partition by album_id, title, artist_id order by album_id) as rownum
+select *, 
+ROW_NUMBER() over(partition by album_id, title, artist_id order by album_id) as rownum
 from album$ as al
 ) as bl
 where rownum > 1 
@@ -146,8 +127,8 @@ where rownum > 1
 select *
 from (
 select*, ROW_NUMBER() over(partition by  artist_id, name order by artist_id) as rownum
-from artist$ as al
-) as bl
+from artist$ as a
+) as b
 where rownum > 1
 
 ----- alternatively checking for duplicates could be done using this method
@@ -209,7 +190,7 @@ from invoice$
 group by billing_city
 order by sum(total) desc
 
----  Q5: Who is the best customer? (ie the customer that spent the most)
+---  Q5: Who is the best customer? (i.e the customer that spent the most)
 
 select top 1  ii.customer_id,first_name, last_name, sum(total) as sum_of_total
 from invoice$ ii
@@ -420,7 +401,7 @@ order by type_total desc
 
 ---- Top countries
 select billing_country, COUNT(billing_country) as country, i.customer_id as customer_id
---into top_countries
+into top_countries
 from invoice$ i
 group by billing_country,i.customer_id
 order by count(billing_country) desc
@@ -431,7 +412,7 @@ select * from playlist$
 select sum(il.unit_price * quantity) as sales, il.track_id as track_id,t.name as track_name , 
 al.title as albums, art.name as artists,t.genre_id as genre,c.customer_id, concat(first_name,' ', last_name)
 as customers_names, art.artist_id, p.playlist_id
---into all_sales
+into all_sales
 from invoice$ i
 join invoice_line$ il
 on i.invoice_id = il.invoice_id
@@ -454,7 +435,7 @@ order by sales desc
 
 ---- Biggest playlist
 select distinct p.name, COUNT(pt.track_id) as song_count, p.playlist_id
---into playlist
+into playlist
 from playlist$ p
 join playlist_track$ pt
 on p.playlist_id = pt.playlist_id
@@ -477,7 +458,7 @@ on t.genre_id = g.genre_id
 group by g.name, g.genre_id
 )
 select * 
---into genres_
+into genres_
 from top_country 
 where row_num <= 1
 order by sales desc
@@ -486,7 +467,7 @@ order by sales desc
 
 ---Total artists
 select count(a.artist_id) as artist_count, a.artist_id
---into artist_list
+into artist_list
 from artist$ a
 group by a.artist_id
 order by artist_count
@@ -494,6 +475,6 @@ order by artist_count
 
 --- total customers
 select COUNT(c.customer_id) as customers_count, c.customer_id
---into customers_count
+into customers_count
 from customer$ c
 group by c.customer_id
